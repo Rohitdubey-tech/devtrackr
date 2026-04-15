@@ -45,3 +45,5 @@ export const TaskCard = ({ task }) => {
     </div>
   );
 };
+
+export default TaskCard;
