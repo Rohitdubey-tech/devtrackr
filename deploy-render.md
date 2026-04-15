@@ -31,16 +31,20 @@ In the Render creation screen, use these exact settings:
 
 ## 🔑 Step 3: Add Environment Variables
 
-Click the **Advanced** button and add these variables (refer to your `.env`):
+Click the **Advanced** button and add these variables:
 
 | Key | Value |
 |:---|:---|
 | `NODE_ENV` | `production` |
-| `PORT` | `5001` |
+| `PORT` | `8080` ← **Must match the Dockerfile `EXPOSE 8080`** |
 | `MONGODB_URI` | *Your Atlas Connection String* |
-| `JWT_SECRET` | *Your Secret String* |
-| `JWT_REFRESH_SECRET` | *Your Refresh Secret String* |
-| `CLIENT_URL` | *Leave empty until you get your Render URL, then update it.* |
+| `JWT_SECRET` | *Any strong random string* |
+| `JWT_REFRESH_SECRET` | *Any strong random string (different from above)* |
+| `CLIENT_URL` | `https://YOUR-APP-NAME.onrender.com` ← **Set your actual Render URL here** |
+
+> ⚠️ **`PORT` MUST be `8080`** — that's what the Dockerfile exposes. If you set it to `5001`, Render won't route traffic correctly.
+
+> ⚠️ **`CLIENT_URL` MUST be your full Render URL** — e.g., `https://devtrackr-abc1.onrender.com`. Without this, CORS will block login requests.
 
 ---
 
@@ -51,6 +55,22 @@ Click **Create Web Service**.
 - It will first build your **React Frontend** (Stage 1).
 - Then it will setup your **Node Backend** (Stage 2).
 - Once finished, it will provide a URL like `devtrackr-xxxx.onrender.com`.
+
+---
+
+## 🛠️ Troubleshooting Login Issues
+
+If login still fails after deploying:
+
+1. **Check Render Logs** → Go to your service → **Logs** tab. Look for CORS errors or DB connection failures.
+
+2. **Verify MongoDB Atlas Network Access** → Go to Atlas → Network Access → Ensure `0.0.0.0/0` is whitelisted.
+
+3. **Check `CLIENT_URL`** → In Render → Environment → Make sure `CLIENT_URL` exactly matches your live URL (no trailing slash).
+
+4. **Redeploy after env var changes** → Render does NOT auto-redeploy when you change env vars. Go to **Manual Deploy** → **Deploy latest commit**.
+
+5. **Health check** → Visit `https://your-app.onrender.com/api/v1/health` — it should return `{"success":true}`.
 
 ---
 
