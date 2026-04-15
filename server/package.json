@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "predev": "lsof -ti :5001 | xargs kill -9 || true",
     "dev": "node --watch src/server.js",
     "start": "node src/server.js"
   },

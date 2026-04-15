@@ -39,7 +39,9 @@ app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 
 // ─── Global Middleware ────────────────────────────────────────
 app.use(cors({
-  origin: env.CLIENT_URL,
+  origin: env.NODE_ENV === "production"
+    ? env.CLIENT_URL  // App Runner URL set as env var in AWS console
+    : env.CLIENT_URL, // localhost:5180 in dev
   credentials: true,
 }));
 app.use(express.json({ limit: "10mb" }));
@@ -54,26 +56,27 @@ app.use("/api/v1/snippets", snippetRoutes);
 app.use("/api/v1/analytics", analyticsRoutes);
 app.use("/api/v1/admin", adminRoutes);
 
+// ─── Health Check (all environments) ────────────────────────
+app.get("/api/v1/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "DevTrackr API is running",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ─── Static File Serving (Production) ─────────────────────────
 if (env.NODE_ENV === "production") {
   // Serve the 'dist' folder (which will be in the parent dir in Docker)
   const distPath = path.join(__dirname, "../../dist");
   app.use(express.static(distPath));
 
-  // Handle SPA routing: all non-API requests go to index.html
-  app.get("*", (req, res) => {
+  // Handle SPA routing: only non-API requests go to index.html
+  app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(distPath, "index.html"));
   });
 } else {
-  // ─── Health Check & 404 (Development only) ───────────────────
-  app.get("/api/v1/health", (req, res) => {
-    res.json({
-      success: true,
-      message: "DevTrackr API is running",
-      timestamp: new Date().toISOString(),
-    });
-  });
-
   app.use("*", (req, res) => {
     res.status(404).json({
       success: false,

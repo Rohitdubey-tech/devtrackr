@@ -1,8 +1,13 @@
 import axios from "axios";
 
 // ── Backend API client (with JWT auth) ──────────────────────
+// In production (Docker/App Runner), the frontend is served by the same
+// Express server, so the base URL is relative (/api/v1).
+// In local dev, VITE_API_URL defaults to localhost:5001.
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
+
 export const api = axios.create({
-  baseURL: "http://localhost:5001/api/v1",
+  baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -26,7 +31,7 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem("refreshToken");
-        const { data } = await axios.post("http://localhost:5001/api/v1/auth/refresh", { refreshToken });
+        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
 
         localStorage.setItem("accessToken", data.data.accessToken);
         localStorage.setItem("refreshToken", data.data.refreshToken);

@@ -1,77 +1,154 @@
 # ☁️ AWS Deployment Guide | DevTrackr
 
-This guide covers the professional deployment of **DevTrackr** to **AWS App Runner** using **Docker**. This is the recommended approach for modern, scalable, and secure MERN applications.
+Deploy DevTrackr to **AWS App Runner** via **ECR** — a fully managed container service with automatic SSL, scaling, and zero server management.
 
 ---
 
-## 🏗️ Prerequisites
-1. **AWS Account**: Active account with IAM permissions for App Runner, ECR, and IAM roles.
-2. **AWS CLI**: Installed and configured (`aws configure`).
-3. **Docker**: Installed and running locally.
-4. **MongoDB Atlas**: A live cluster (Network Access must allow AWS IPs or `0.0.0.0/0`).
+## ✅ Prerequisites Checklist
+
+| Requirement | How to Check |
+|---|---|
+| AWS CLI installed | `aws --version` |
+| AWS CLI configured | `aws sts get-caller-identity` |
+| Docker running | `docker --version` |
+| MongoDB Atlas: Allow All IPs | Add `0.0.0.0/0` to Network Access |
+
+> **AWS Region:** `ap-south-1` (Mumbai) — best latency from India
 
 ---
 
-## 📦 Step 1: Containerize & Push to AWS ECR
+## 📌 One-Time Setup
 
-AWS ECR (Elastic Container Registry) is where your Docker image will live.
+### Step 1: Get your AWS Account ID
+```bash
+aws sts get-caller-identity --query Account --output text
+# Copy the number — you'll use it below as YOUR_ACCOUNT_ID
+```
 
-1. **Create an ECR Repository**:
-   ```bash
-   aws ecr create-repository --repository-name devtrackr
-   ```
-
-2. **Login to ECR**:
-   ```bash
-   aws ecr get-login-password --region your-region | docker login --username AWS --password-stdin your-account-id.dkr.ecr.your-region.amazonaws.com
-   ```
-
-3. **Build & Tag your Image**:
-   ```bash
-   docker build -t devtrackr .
-   docker tag devtrackr:latest your-account-id.dkr.ecr.your-region.amazonaws.com/devtrackr:latest
-   ```
-
-4. **Push the Image**:
-   ```bash
-   docker push your-account-id.dkr.ecr.your-region.amazonaws.com/devtrackr:latest
-   ```
+### Step 2: Create ECR Repository (only once)
+```bash
+aws ecr create-repository \
+  --repository-name devtrackr \
+  --region ap-south-1
+```
 
 ---
 
-## 🚀 Step 2: Deploy to AWS App Runner
+## 🚀 Deploy (Run These Every Time You Want to Release)
 
-AWS App Runner provides a direct URL and handles SSL/Load Balancing automatically.
+Copy and run all 5 commands in order from the project root (`devtrackr/`):
 
-1. Go to the **App Runner Console** in AWS.
-2. Click **Create Service**.
-3. **Source**: Select "Container registry" and choose your `devtrackr` image from ECR.
-4. **Deployment Settings**: Select "Automatic" (AWS will redeploy whenever you push a new image).
-5. **Configuration**:
-    - **Port**: `5001`
-    - **Environment Variables**: Add all variables from your `.env.example` (MongoDB URI, JWT Secrets, etc.).
-    - **Note**: Set `NODE_ENV` to `production` and `CLIENT_URL` to the URL AWS provides after creation.
-6. **Review & Create**: AWS will now spin up your full-stack app!
+```bash
+# 1. Authenticate Docker to ECR
+aws ecr get-login-password --region ap-south-1 \
+  | docker login --username AWS --password-stdin \
+    YOUR_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com
+
+# 2. Build the production Docker image
+docker build -t devtrackr:latest .
+
+# 3. Tag the image for ECR
+docker tag devtrackr:latest \
+  YOUR_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/devtrackr:latest
+
+# 4. Push to ECR
+docker push \
+  YOUR_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/devtrackr:latest
+
+# 5. Done — App Runner will auto-redeploy if configured (see below)
+echo "✅ Image pushed to ECR"
+```
+
+> **Tip:** Replace `YOUR_ACCOUNT_ID` with your actual AWS Account ID.
 
 ---
 
-## 🔒 Step 3: Security Best Practices
+## ⚙️ Step 3: Create App Runner Service (First Time Only)
 
-### 1. Secrets Management
-Instead of plain environment variables in the console, use **AWS Secrets Manager** and map them to your App Runner service for enterprise-grade security.
+1. Open the [App Runner Console](https://console.aws.amazon.com/apprunner) → Select **ap-south-1** region.
+2. Click **Create service**.
+3. **Source**: `Container registry` → `Amazon ECR` → Browse and select `devtrackr:latest`.
+4. **Deployment trigger**: `Automatic` (redeploys on every new image push).
+5. **Service settings**:
+   - **Port**: `8080`
+   - **CPU**: 1 vCPU | **Memory**: 2 GB (suitable for this app)
+6. **Environment variables** (add all of these):
 
-### 2. IAM Roles
-Ensure the App Runner service has an **Instance Role** with the minimum permissions required (e.g., if you later add S3 for file uploads).
+| Key | Value |
+|---|---|
+| `NODE_ENV` | `production` |
+| `PORT` | `8080` |
+| `MONGODB_URI` | `mongodb+srv://rohitdubey0601_db_user:...` |
+| `JWT_SECRET` | `your_strong_jwt_secret` |
+| `JWT_REFRESH_SECRET` | `your_strong_refresh_secret` |
+| `JWT_EXPIRES_IN` | `15m` |
+| `JWT_REFRESH_EXPIRES_IN` | `7d` |
+| `CLIENT_URL` | *(Leave blank for now — fill in after deploy)* |
 
-### 3. Monitoring
-Enable **CloudWatch Logs** in the App Runner configuration to track server performance and debug issues in real-time.
+7. Click **Create & deploy**. AWS will provide a URL like:
+   `https://xxxxxxxxxx.ap-south-1.awsapprunner.com`
+
+8. **Update `CLIENT_URL`**: Go back to the service → Configuration → Update `CLIENT_URL` to your new AWS URL.
 
 ---
 
-## 📊 Why this outshines others in interviews:
-- **Cloud-Native**: Shows you understand the transition from "code on my machine" to "containers in the cloud."
-- **Infrastructure as Code (IaC) Ready**: This setup easily transitions to Terraform or AWS CDK.
-- **Security Awareness**: Use of `.env.example`, multi-stage Docker builds, and production-hardened headers demonstrates senior-level maturity.
+## 🔒 Step 4: MongoDB Atlas — Allow AWS Access
+
+> [!IMPORTANT]
+> App Runner does NOT have a fixed IP. You must allow all IPs in Atlas:
+>
+> 1. Go to [MongoDB Atlas](https://cloud.mongodb.com) → Network Access
+> 2. Click **Add IP Address** → Select **Allow Access from Anywhere** (`0.0.0.0/0`)
+> 3. Save
+
+---
+
+## ✅ Step 5: Verify Your Live App
+
+```bash
+# Replace with your App Runner URL
+curl https://xxxxxxxxxx.ap-south-1.awsapprunner.com/api/v1/health
+```
+Expected response:
+```json
+{"success": true, "message": "DevTrackr API is running", "version": "1.0.0"}
+```
+
+Then open the URL in your browser — the login page should load and auth should work.
+
+---
+
+## 🔁 How to Redeploy After Code Changes
+
+```bash
+# Just run these 4 commands — App Runner does the rest automatically
+aws ecr get-login-password --region ap-south-1 \
+  | docker login --username AWS --password-stdin \
+    YOUR_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com
+
+docker build -t devtrackr:latest . && \
+docker tag devtrackr:latest \
+  YOUR_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/devtrackr:latest && \
+docker push \
+  YOUR_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/devtrackr:latest
+```
+
+---
+
+## 📊 Architecture Overview
+
+```
+Browser
+  │
+  ▼
+AWS App Runner (HTTPS auto-SSL)
+  │
+  ├── /api/v1/*  ──► Express API  ──► MongoDB Atlas
+  │
+  └── /*  ──────► React SPA (served by Express static)
+```
+
+Everything runs in **one Docker container** — no separate frontend hosting needed.
 
 ---
 
