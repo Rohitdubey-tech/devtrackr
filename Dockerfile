@@ -1,35 +1,36 @@
 # ─── Stage 1: Build Frontend ───────────────────────────────────
 FROM node:20-alpine AS build-stage
 
-WORKDIR /app
+WORKDIR /app/frontend
 
-# Copy root package.json for frontend dependencies
-COPY package*.json ./
+# Copy frontend package.json
+COPY frontend/package*.json ./
 RUN npm install
 
-# Copy all frontend code (includes .env.production)
-COPY . .
+# Copy all frontend code
+COPY frontend/ ./
 
-# Build the React app (Vite picks up .env.production automatically)
+# Build the React app
 RUN npm run build
 
 
 # ─── Stage 2: Production Server ────────────────────────────────
 FROM node:20-alpine AS production-stage
 
-WORKDIR /app/server
+WORKDIR /app/backend
 
-# Copy server package.json
-COPY server/package*.json ./
+# Copy backend package.json
+COPY backend/package*.json ./
 
-# Install ONLY production dependencies (no devDependencies)
+# Install ONLY production dependencies
 RUN npm install --omit=dev
 
-# Copy server source code
-COPY server/src ./src
+# Copy backend source code
+COPY backend/src ./src
+COPY backend/.env* ./
 
-# Copy built frontend from Stage 1
-COPY --from=build-stage /app/dist /app/dist
+# Copy built frontend from Stage 1 into the new expected path
+COPY --from=build-stage /app/frontend/dist /app/frontend/dist
 
 # ── Environment ──────────────────────────────────────────────
 ENV NODE_ENV=production
