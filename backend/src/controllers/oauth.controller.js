@@ -2,11 +2,18 @@ import User from "../models/User.js";
 import { generateTokenPair } from "../utils/jwt.js";
 import env from "../config/env.js";
 
+// Helper: derive the server's public base URL from the incoming request
+const getServerBaseUrl = (req) => {
+  const protocol = req.protocol; // respects trust proxy
+  const host = req.get("host");  // includes port if non-standard
+  return `${protocol}://${host}`;
+};
+
 // GOOGLE OAUTH
 export const googleAuth = (req, res) => {
   const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
   const options = {
-    redirect_uri: `http://localhost:${env.PORT}/api/v1/auth/callback/google`,
+    redirect_uri: `${getServerBaseUrl(req)}/api/v1/auth/callback/google`,
     client_id: env.GOOGLE_CLIENT_ID,
     access_type: "offline",
     response_type: "code",
@@ -36,7 +43,7 @@ export const googleCallback = async (req, res, next) => {
         code,
         client_id: env.GOOGLE_CLIENT_ID,
         client_secret: env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: `http://localhost:${env.PORT}/api/v1/auth/callback/google`,
+        redirect_uri: `${getServerBaseUrl(req)}/api/v1/auth/callback/google`,
         grant_type: "authorization_code",
       }),
     });
@@ -80,7 +87,7 @@ export const githubAuth = (req, res) => {
   const rootUrl = "https://github.com/login/oauth/authorize";
   const options = {
     client_id: env.GITHUB_CLIENT_ID,
-    redirect_uri: `http://localhost:${env.PORT}/api/v1/auth/callback/github`,
+    redirect_uri: `${getServerBaseUrl(req)}/api/v1/auth/callback/github`,
     scope: "user:email",
   };
 

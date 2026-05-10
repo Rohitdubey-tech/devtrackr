@@ -18,7 +18,10 @@ export const useAuthStore = create((set, get) => ({
       set({ user: data.data.user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
-      set({ error: err.response?.data?.message || "Registration failed", isLoading: false });
+      const msg = err.response?.data?.message
+        || err.response?.data?.errors?.map(e => e.message).join(", ")
+        || (err.request ? "Cannot reach server. Check your connection." : "Registration failed");
+      set({ error: msg, isLoading: false });
       return false;
     }
   },
@@ -33,7 +36,10 @@ export const useAuthStore = create((set, get) => ({
       set({ user: data.data.user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
-      set({ error: err.response?.data?.message || "Login failed", isLoading: false });
+      const msg = err.response?.data?.message
+        || err.response?.data?.errors?.map(e => e.message).join(", ")
+        || (err.request ? "Cannot reach server. Check your connection." : "Login failed");
+      set({ error: msg, isLoading: false });
       return false;
     }
   },

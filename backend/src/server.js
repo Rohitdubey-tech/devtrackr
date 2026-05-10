@@ -31,8 +31,18 @@ app.use(helmet({
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
       "script-src": ["'self'", "'unsafe-inline'"], // Allow Vite inline scripts
       "img-src": ["'self'", "data:", "https://avatars.githubusercontent.com"],
+      "connect-src": [
+        "'self'",
+        "https://api.github.com",
+        "https://leetcode.com",
+        "https://alfa-leetcode-api.onrender.com",
+        "https://geeks-for-geeks-stats-api.onrender.com",
+        "https://geeksforgeeksapi.onrender.com",
+      ],
+      "form-action": ["'self'"],
     },
   },
+  crossOriginEmbedderPolicy: false, // Allow cross-origin API fetches
 }));
 app.use(compression());
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));

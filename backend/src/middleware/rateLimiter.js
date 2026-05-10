@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 // so each user's real IP is used instead of the proxy's IP
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 300, // Higher for cloud deployments where users may share an IP
   message: {
     success: false,
     message: "Too many requests from this IP, please try again after 15 minutes.",
@@ -20,7 +20,7 @@ export const apiLimiter = rateLimit({
 // Stricter limiter for auth endpoints
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20, // Increased from 10 to avoid blocking legitimate users on Render
+  max: 50, // Higher for cloud deployments (Render/AWS) where users may share proxy IPs
   message: {
     success: false,
     message: "Too many login attempts, please try again after 15 minutes.",
