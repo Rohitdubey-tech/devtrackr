@@ -58,13 +58,8 @@ const allowedOrigins = env.CLIENT_URL
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (same-origin, mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    // Allow if origin matches CLIENT_URL or if no CLIENT_URL is set (dev fallback)
-    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    callback(new Error(`CORS: Origin ${origin} not allowed`));
+    // Dynamically allow any origin to prevent CORS network errors
+    return callback(null, true);
   },
   credentials: true,
 }));
