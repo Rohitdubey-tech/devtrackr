@@ -4,7 +4,9 @@ import axios from "axios";
 // In production (Docker/App Runner), the frontend is served by the same
 // Express server, so the base URL is relative (/api/v1).
 // In local dev, VITE_API_URL defaults to localhost:5001.
-export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
+export const API_BASE_URL = import.meta.env.PROD 
+  ? "/api/v1" 
+  : (import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1");
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
